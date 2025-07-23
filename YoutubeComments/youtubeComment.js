@@ -11,26 +11,37 @@ require('dotenv').config();
  */
 
 async function commentOnYouTubeVideo(videoTitle, commentText, videoIndex = 1) {
-  // Inicia um navegador novo, do zero, em modo headless
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext();
   const page = await context.newPage();
-  const wait = () => page.waitForTimeout(2000);
-
+  
   try {
     // --- LÓGICA DE LOGIN COM COOKIES ---
     console.log('🍪 Carregando cookies de autenticação...');
-    
-    // Lê o arquivo de cookies
     const cookiesFilePath = path.join(__dirname, 'cookies.json');
     if (!fs.existsSync(cookiesFilePath)) {
-      throw new Error('Arquivo "cookies.json" não encontrado. Execute o script "salvar-cookies.js" primeiro.');
+      throw new Error('Arquivo "cookies.json" não encontrado. Execute "salvar-cookies.js" primeiro.');
     }
     const cookies = JSON.parse(fs.readFileSync(cookiesFilePath, 'utf8'));
-    
-    // Adiciona os cookies ao contexto do navegador
     await context.addCookies(cookies);
     console.log('...Cookies injetados.');
+    
+    await page.goto('https://www.youtube.com');
+    
+    // --- NOVA LÓGICA: TRATAMENTO DO POP-UP DE CONSENTIMENTO ---
+    try {
+      console.log('🔎 Verificando se há um pop-up de consentimento de cookies...');
+      // O seletor busca um botão que contenha o texto "Aceitar tudo"
+      const acceptButton = page.locator('button:has-text("Aceitar tudo")');
+      // Usamos um timeout curto, pois este pop-up nem sempre aparece.
+      await acceptButton.waitFor({ state: 'visible', timeout: 5000 });
+      await acceptButton.click();
+      console.log('✔️ Pop-up de consentimento encontrado e aceito!');
+      await page.waitForTimeout(2000); // Pequena pausa para a página recarregar
+    } catch (error) {
+      // Se o botão não for encontrado, não é um erro. Apenas significa que o pop-up não apareceu.
+      console.log('...Nenhum pop-up de consentimento encontrado, continuando.');
+    }
 
     // Navega para o YouTube JÁ LOGADO
     await page.goto('https://www.youtube.com');
