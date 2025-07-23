@@ -1,5 +1,6 @@
 const { chromium } = require('playwright');
 const path = require('path');
+const fs = require('fs');
 require('dotenv').config();
 
 /**
@@ -10,73 +11,34 @@ require('dotenv').config();
  */
 
 async function commentOnYouTubeVideo(videoTitle, commentText, videoIndex = 1) {
-  const email = process.env.GOOGLE_EMAIL;
-  const password = process.env.GOOGLE_PASSWORD;
-
-  const userDataDir = path.join(__dirname, 'meu-perfil-chrome');
-  const context = await chromium.launchPersistentContext(userDataDir, {
-    headless: true,
-    args: ['--disable-blink-features=AutomationControlled'],
-  });
-  const page = context.pages().length ? context.pages()[0] : await context.newPage();
+  // Inicia um navegador novo, do zero, em modo headless
+  const browser = await chromium.launch({ headless: false });
+  const context = await browser.newContext();
+  const page = await context.newPage();
   const wait = () => page.waitForTimeout(2000);
 
   try {
-    console.log('🚀 Navegando para o YouTube...');
-    await page.goto('https://www.youtube.com');
-
-    // Tenta usar o perfil salvo primeiro
-    try {
-      console.log('🔎 Verificando login via perfil salvo (tentativa rápida)...');
-      await page.waitForSelector('button#avatar-btn', { timeout: 5000 });
-      console.log('✅ Login via perfil salvo bem-sucedido!');
-
-    } catch (error) {
-      // Se o perfil salvo falhar, inicia o login programático completo
-      console.log('⚠️ Perfil salvo não funcionou. Iniciando login programático...');
-      
-      if (!email || !password) {
-        throw new Error('Login via perfil falhou e as variáveis de ambiente GOOGLE_EMAIL e GOOGLE_PASSWORD não foram definidas.');
-      }
-      
-      await page.goto('https://accounts.google.com/signin/v2/identifier?flowName=GlifWebSignIn&flowEntry=ServiceLogin');
-      
-      try {
-        // TENTATIVA 1: Clicar no perfil "Utoopy" já listado
-        console.log('   1. Verificando se o perfil "Utoopy" já está listado...');
-        await page.getByRole('link', { name: /Utoopy/ }).click({ timeout: 15000 });
-        console.log('   -> Perfil "Utoopy" encontrado e clicado!');
-      } catch (e1) {
-        console.log('   -> Perfil "Utoopy" não encontrado.');
-        try {
-          // TENTATIVA 2: Clicar em "Usar outra conta"
-          console.log('   2. Verificando a opção "Usar outra conta"...');
-          await page.getByRole('link', { name: 'Usar outra conta' }).click({ timeout: 15000 });
-          console.log('   -> Clicado em "Usar outra conta".');
-        } catch (e2) {
-          // TENTATIVA 3 (FALLBACK): Prosseguir para digitar o e-mail
-          console.log('   -> Nenhuma opção pré-definida encontrada. Prosseguindo para digitar o e-mail.');
-        }
-      }
-
-      const emailInput = page.getByLabel('E-mail ou telefone');
-      if (await emailInput.isVisible({ timeout: 5000 })) {
-          console.log('   -> Digitando e-mail...');
-          await emailInput.pressSequentially(email, { delay: 50 });
-          await page.getByRole('button', { name: 'Avançar' }).click();
-      }
-
-      console.log('   -> Digitando senha...');
-      const passwordInput = page.getByLabel('Digite sua senha');
-      await passwordInput.waitFor({ state: 'visible', timeout: 15000 });
-      await passwordInput.pressSequentially(password, { delay: 50 });
-      await page.getByRole('button', { name: 'Avançar' }).click();
-      
-      // Verificação final do login
-      await page.goto('https://www.youtube.com');
-      await page.waitForSelector('button#avatar-btn', { timeout: 20000 });
-      console.log('✅ Login programático bem-sucedido!');
+    // --- LÓGICA DE LOGIN COM COOKIES ---
+    console.log('🍪 Carregando cookies de autenticação...');
+    
+    // Lê o arquivo de cookies
+    const cookiesFilePath = path.join(__dirname, 'cookies.json');
+    if (!fs.existsSync(cookiesFilePath)) {
+      throw new Error('Arquivo "cookies.json" não encontrado. Execute o script "salvar-cookies.js" primeiro.');
     }
+    const cookies = JSON.parse(fs.readFileSync(cookiesFilePath, 'utf8'));
+    
+    // Adiciona os cookies ao contexto do navegador
+    await context.addCookies(cookies);
+    console.log('...Cookies injetados.');
+
+    // Navega para o YouTube JÁ LOGADO
+    await page.goto('https://www.youtube.com');
+    
+    // Confirma que o login funcionou
+    await page.waitForSelector('button#avatar-btn', { timeout: 15000 });
+    console.log('✅ Login via cookies bem-sucedido!');
+    
 
     await page.getByRole('combobox', { name: 'Pesquisar',  timeout: 15000 }).click();
     await wait();
