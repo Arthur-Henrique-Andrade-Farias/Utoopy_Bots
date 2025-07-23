@@ -10,7 +10,7 @@ async function commentOnYouTubeVideo(videoTitle, commentText, videoIndex = 1) {
     throw new Error(`Arquivo de autenticação "${authFile}" não encontrado. Execute o script "salvar-sessao.js" primeiro.`);
   }
 
-  const browser = await chromium.launch({ headless: false });
+  const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ storageState: authFile });
   const page = await context.newPage();
   const wait = () => page.waitForTimeout(2000); // Manteremos a pausa para visibilidade
