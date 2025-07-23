@@ -13,7 +13,7 @@ async function commentOnYouTubeVideo(videoTitle, commentText, videoIndex = 1) {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ storageState: authFile });
   const page = await context.newPage();
-  const wait = () => page.waitForTimeout(2000); // Manteremos a pausa para visibilidade
+  const wait = () => page.waitForTimeout(7000); // Manteremos a pausa para visibilidade
 
   try {
     console.log('🚀 Navegando para o YouTube com a sessão salva...');
@@ -92,7 +92,7 @@ const finalUrl = page.url();
 
 console.log(`🔗 Link final capturado: ${finalUrl}`);
 
-
+await wait();
 
 await page.keyboard.press('PageDown', { timeout: 15000 });
 
