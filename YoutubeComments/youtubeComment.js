@@ -114,6 +114,8 @@ await wait();
 
 await page.getByRole('button', { name: 'Comentar', timeout: 15000 }).click();
 
+await wait(15000);
+
 console.log(`✔️ Comentário "${commentText}" enviado com sucesso!`);
 
 
