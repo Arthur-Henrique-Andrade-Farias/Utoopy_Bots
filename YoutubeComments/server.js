@@ -1,6 +1,6 @@
 const express = require('express');
 const swaggerUi = require('swagger-ui-express');
-const { commentOnYouTubeVideo } = require('./perfil-chrome/youtubeComment.js');
+const { commentOnYouTubeVideo } = require('./youtubeComment.js');
 
 const app = express();
 const PORT = 3000;
