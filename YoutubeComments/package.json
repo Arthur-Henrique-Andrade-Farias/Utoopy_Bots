@@ -1,0 +1,25 @@
+{
+  "name": "youtubecomments",
+  "version": "1.0.0",
+  "main": "youtube-bot.js",
+  "scripts": {},
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.54.1",
+    "@types/node": "^24.0.13"
+  },
+  "directories": {
+    "test": "tests"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "playwright": "^1.54.1",
+    "playwright-core": "^1.54.1",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
+    "undici-types": "^7.8.0"
+  },
+  "description": ""
+}

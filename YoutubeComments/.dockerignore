@@ -1,0 +1,7 @@
+# .dockerignore
+
+# Ignora a pasta de pacotes do Node, pois ela será instalada no contêiner
+node_modules
+
+# Ignora a pasta do Git
+.git
