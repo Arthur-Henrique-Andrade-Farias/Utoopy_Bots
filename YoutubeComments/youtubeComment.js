@@ -12,7 +12,7 @@ require('dotenv').config();
 
 async function commentOnYouTubeVideo(videoTitle, commentText, videoIndex = 1) {
   // Inicia um navegador novo, do zero, em modo headless
-  const browser = await chromium.launch({ headless: false });
+  const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext();
   const page = await context.newPage();
   const wait = () => page.waitForTimeout(2000);
