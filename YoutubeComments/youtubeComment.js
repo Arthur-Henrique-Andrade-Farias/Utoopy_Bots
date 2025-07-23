@@ -8,23 +8,52 @@ const path = require('path');
  * @param {number} videoIndex - O índice do vídeo a ser clicado (0 = primeiro, 1 = segundo, etc.).
  */
 
-async function commentOnYouTubeVideo(videoTitle, commentText, videoIndex = 1) { 
+async function commentOnYouTubeVideo(videoTitle, commentText, videoIndex = 1) {
+  const email = process.env.GOOGLE_EMAIL;
+  const password = process.env.GOOGLE_PASSWORD;
+
   const userDataDir = path.join(__dirname, 'meu-perfil-chrome');
   const context = await chromium.launchPersistentContext(userDataDir, {
-    headless: true,
+    headless: false,
     args: ['--disable-blink-features=AutomationControlled'],
   });
   const page = context.pages().length ? context.pages()[0] : await context.newPage();
   const wait = () => page.waitForTimeout(2000);
 
   try {
-    console.log('🚀 Navegando para o YouTube para verificar o login...');
+    console.log('🚀 Navegando para o YouTube...');
     await page.goto('https://www.youtube.com');
-    await wait();
 
-    console.log('🔎 Verificando se o login já foi feito...');
-    await page.waitForSelector('button#avatar-btn', { timeout: 5000 });
-    console.log('✅ Login confirmado! Iniciando a automação.');
+    // --- LÓGICA DE LOGIN HÍBRIDA ---
+    try {
+      // TENTATIVA RÁPIDA: Tenta encontrar o avatar usando o perfil salvo
+      console.log('🔎 Verificando login via perfil salvo (tentativa rápida)...');
+      await page.waitForSelector('button#avatar-btn', { timeout: 5000 });
+      console.log('✅ Login via perfil salvo bem-sucedido!');
+
+    } catch (error) {
+      // PLANO B: Se a tentativa rápida falhou, executa o login programático
+      console.log('⚠️ Perfil salvo não funcionou ou expirou. Iniciando login programático...');
+      
+      if (!email || !password) {
+        throw new Error('Login via perfil falhou e as variáveis de ambiente GOOGLE_EMAIL e GOOGLE_PASSWORD não foram definidas.');
+      }
+
+      await page.goto('https://accounts.google.com/signin/v2/identifier?flowName=GlifWebSignIn&flowEntry=ServiceLogin');
+      
+      await page.getByLabel('E-mail ou telefone').pressSequentially(email, { delay: 50 });
+      await page.getByRole('button', { name: 'Avançar' }).click();
+      
+      const passwordInput = page.getByLabel('Digite sua senha');
+      await passwordInput.waitFor({ state: 'visible', timeout: 15000 });
+      await passwordInput.pressSequentially(password, { delay: 50 });
+      await page.getByRole('button', { name: 'Avançar' }).click();
+      
+      // Verificação final do login programático
+      await page.goto('https://www.youtube.com');
+      await page.waitForSelector('button#avatar-btn', { timeout: 20000 });
+      console.log('✅ Login programático bem-sucedido!');
+    }
 
     await page.getByRole('combobox', { name: 'Pesquisar' }).click();
     await wait();
