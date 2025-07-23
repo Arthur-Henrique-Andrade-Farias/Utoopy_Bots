@@ -11,7 +11,7 @@ const path = require('path');
 async function commentOnYouTubeVideo(videoTitle, commentText, videoIndex = 1) { 
   const userDataDir = path.join(__dirname, 'meu-perfil-chrome');
   const context = await chromium.launchPersistentContext(userDataDir, {
-    headless: false,
+    headless: true,
     args: ['--disable-blink-features=AutomationControlled'],
   });
   const page = context.pages().length ? context.pages()[0] : await context.newPage();
