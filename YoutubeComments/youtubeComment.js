@@ -1,5 +1,6 @@
 const { chromium } = require('playwright');
 const path = require('path');
+require('dotenv').config();
 
 /**
  * Função principal que automatiza a busca e o comentário em um vídeo do YouTube.
@@ -24,15 +25,12 @@ async function commentOnYouTubeVideo(videoTitle, commentText, videoIndex = 1) {
     console.log('🚀 Navegando para o YouTube...');
     await page.goto('https://www.youtube.com');
 
-    // --- LÓGICA DE LOGIN HÍBRIDA ---
     try {
-      // TENTATIVA RÁPIDA: Tenta encontrar o avatar usando o perfil salvo
       console.log('🔎 Verificando login via perfil salvo (tentativa rápida)...');
       await page.waitForSelector('button#avatar-btn', { timeout: 5000 });
       console.log('✅ Login via perfil salvo bem-sucedido!');
 
     } catch (error) {
-      // PLANO B: Se a tentativa rápida falhou, executa o login programático
       console.log('⚠️ Perfil salvo não funcionou ou expirou. Iniciando login programático...');
       
       if (!email || !password) {
@@ -48,8 +46,8 @@ async function commentOnYouTubeVideo(videoTitle, commentText, videoIndex = 1) {
       await passwordInput.waitFor({ state: 'visible', timeout: 15000 });
       await passwordInput.pressSequentially(password, { delay: 50 });
       await page.getByRole('button', { name: 'Avançar' }).click();
+      await wait(15000);
       
-      // Verificação final do login programático
       await page.goto('https://www.youtube.com');
       await page.waitForSelector('button#avatar-btn', { timeout: 20000 });
       console.log('✅ Login programático bem-sucedido!');

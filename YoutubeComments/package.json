@@ -14,6 +14,7 @@
     "test": "tests"
   },
   "dependencies": {
+    "dotenv": "^17.2.0",
     "express": "^5.1.0",
     "playwright": "^1.54.1",
     "playwright-core": "^1.54.1",
