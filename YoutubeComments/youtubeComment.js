@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 
 async function commentOnYouTubeVideo(videoTitle, commentText, videoIndex = 1) {
-  const authFile = path.join(__dirname, 'auth.json');
+  const authFile = './auth.json';
 
   if (!fs.existsSync(authFile)) {
     throw new Error(`Arquivo de autenticação "${authFile}" não encontrado. Execute o script "salvar-sessao.js" primeiro.`);
