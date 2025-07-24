@@ -5,7 +5,7 @@ const swaggerUi = require('swagger-ui-express');
 const { commentOnYouTubeVideo } = require('./youtubeComment.js');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 const SECRET_API_KEY = 'BOT-YT-ARTHUR-2025-XYZ-987-QWERTY-123';
 
