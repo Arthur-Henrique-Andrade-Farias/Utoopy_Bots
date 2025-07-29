@@ -10,16 +10,22 @@ async function commentOnYouTubeVideo(videoTitle, commentText, videoIndex = 1) {
     throw new Error(`Arquivo de autenticação "${authFile}" não encontrado. Execute o script "salvar-sessao.js" primeiro.`);
   }
 
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: false });
   const context = await browser.newContext({ storageState: authFile });
-  const page = await context.newPage();
-  const wait = () => page.waitForTimeout(3000); // Manteremos a pausa para visibilidade
+  const page = context.pages().length ? context.pages()[0] : await context.newPage();
+  
+  const wait = () => {
+    const minMilliseconds = 5000;
+    const maxMilliseconds = 7000;
+    const randomDelay = Math.floor(Math.random() * (maxMilliseconds - minMilliseconds + 1)) + minMilliseconds;
+    console.log(`...Aguardando por ${(randomDelay / 1000).toFixed(1)} segundos...`);
+    return page.waitForTimeout(randomDelay);
+  };
 
   try {
     console.log('🚀 Navegando para o YouTube com a sessão salva...');
     await page.goto('https://www.youtube.com');
     
-    // Verificação do pop-up de consentimento
     try {
         const acceptButton = page.locator('button:has-text("Aceitar tudo")');
         await acceptButton.waitFor({ state: 'visible', timeout: 5000 });
@@ -114,11 +120,27 @@ await wait();
 
 await page.getByRole('button', { name: 'Comentar', timeout: 15000 }).click();
 
-await wait(15000);
+await wait();
 
 console.log(`✔️ Comentário "${commentText}" enviado com sucesso!`);
 
+await wait();
 
+await page.getByText('Adicione um comentário…', { timeout: 15000 }).click();
+
+await wait();
+
+
+
+await page.getByLabel('Adicione um comentário…', { timeout: 15000 }).fill("Comentário feito com @Utoopy, venha conhecer!");
+
+await wait();
+
+
+
+await page.getByRole('button', { name: 'Comentar', timeout: 15000 }).click();
+
+await wait();
 
 return finalUrl;
 
@@ -158,7 +180,7 @@ if (require.main === module) {
 
 (async () => {
 
-const tituloParaTeste = "viagem";
+const tituloParaTeste = "jogo";
 
 const comentarioParaTeste = "Que vídeo incrível!";
 
