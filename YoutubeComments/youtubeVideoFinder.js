@@ -92,7 +92,7 @@ if (require.main === module) {
     console.log(`--- Iniciando teste local para: "${tituloParaTeste}" ---`);
     
     try {
-      const videoData = await findYouTubeVideo(tituloParaTeste, indiceDoVideo, { headless: false });
+      const videoData = await findYouTubeVideo(tituloParaTeste, indiceDoVideo, { headless: true });
       
       console.log('\n--- Teste finalizado com sucesso! ---');
       console.log('Dados encontrados:', videoData);
