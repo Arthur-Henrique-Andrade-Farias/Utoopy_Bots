@@ -9,7 +9,7 @@ async function commentOnYouTubeVideo(videoTitle, commentText, videoIndex = 1) {
     throw new Error(`Arquivo de autenticação "${authFile}" não encontrado. Execute "salvar-sessao.js" primeiro.`);
   }
 
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: false });
   const context = await browser.newContext({ storageState: authFile });
   const page = context.pages().length ? context.pages()[0] : await context.newPage();
   
@@ -110,14 +110,17 @@ async function commentOnYouTubeVideo(videoTitle, commentText, videoIndex = 1) {
     await page.getByRole('button', { name: 'Comentar' }).click();
     console.log(`✔️ Comentário 1/2 enviado: "${commentText}"`);
     await wait();
-    
-    await page.getByLabel('Adicione um comentário…').click();
+
+    await page.evaluate(() => document.activeElement.blur());
+    await wait();
+
+    /*await page.getByLabel('Adicione um comentário…').click();
     await wait();
     await page.getByLabel('Adicione um comentário…').fill("Comentário feito com @Utoopy, venha conhecer!");
     await wait();
     await page.getByRole('button', { name: 'Comentar' }).click();
     console.log(`✔️ Comentário 2/2 enviado.`);
-    await wait();
+    await wait();*/
 
     return finalUrl;
 
@@ -137,8 +140,8 @@ module.exports = { commentOnYouTubeVideo };
 
 if (require.main === module) {
   (async () => {
-    const tituloParaTeste = "teste de futebol";
-    const comentarioParaTeste = "Adoro futebol!";
+    const tituloParaTeste = "viagem";
+    const comentarioParaTeste = "Adoro viajar!";
     await commentOnYouTubeVideo(tituloParaTeste, comentarioParaTeste, 0);
   })();
 }
