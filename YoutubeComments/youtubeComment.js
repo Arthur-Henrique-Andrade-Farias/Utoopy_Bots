@@ -113,6 +113,8 @@ async function commentOnYouTubeVideo(videoTitle, commentText, videoIndex = 1) {
 
     await page.evaluate(() => document.activeElement.blur());
     await wait();
+    await wait();
+    await wait();
 
     /*await page.getByLabel('Adicione um comentário…').click();
     await wait();
