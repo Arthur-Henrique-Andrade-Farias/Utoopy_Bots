@@ -1,6 +1,12 @@
-const { chromium } = require('playwright');
+// 1. Mudar a importação para 'playwright-extra'
+const { chromium } = require('playwright-extra');
 const path = require('path');
 const fs = require('fs');
+
+// 2. Adicionar e usar o plugin 'stealth'
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+chromium.use(StealthPlugin());
+
 
 async function commentOnYouTubeVideo(videoTitle, commentText, videoIndex = 1) {
   const authFile = './auth.json';
@@ -9,7 +15,8 @@ async function commentOnYouTubeVideo(videoTitle, commentText, videoIndex = 1) {
     throw new Error(`Arquivo de autenticação "${authFile}" não encontrado. Execute "salvar-sessao.js" primeiro.`);
   }
 
-  const browser = await chromium.launch({ headless: true });
+  // 3. O browser agora é iniciado pelo 'playwright-extra' com o modo stealth ativado
+  const browser = await chromium.launch({ headless: false });
   const context = await browser.newContext({ storageState: authFile });
   const page = context.pages().length ? context.pages()[0] : await context.newPage();
   
