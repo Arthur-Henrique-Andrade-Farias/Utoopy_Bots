@@ -16,7 +16,7 @@ async function commentOnYouTubeVideo(videoTitle, commentText, videoIndex = 1) {
   }
 
   // 3. O browser agora é iniciado pelo 'playwright-extra' com o modo stealth ativado
-  const browser = await chromium.launch({ headless: false });
+  const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ storageState: authFile });
   const page = context.pages().length ? context.pages()[0] : await context.newPage();
   
