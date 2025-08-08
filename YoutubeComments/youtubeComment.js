@@ -1,144 +1,151 @@
-// 1. Mudar a importação para 'playwright-extra'
 const { chromium } = require('playwright-extra');
 const path = require('path');
 const fs = require('fs');
 
-// 2. Adicionar e usar o plugin 'stealth'
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 chromium.use(StealthPlugin());
 
-
-async function commentOnYouTubeVideo(videoTitle, commentText, videoIndex = 1) {
+async function commentOnYouTubeVideo(videoTitle, commentText) {
   const authFile = './auth.json';
 
   if (!fs.existsSync(authFile)) {
-    throw new Error(`Arquivo de autenticação "${authFile}" não encontrado. Execute "salvar-sessao.js" primeiro.`);
+    throw new Error(`Arquivo de autenticação "${authFile}" não encontrado.`);
   }
 
-  // 3. O browser agora é iniciado pelo 'playwright-extra' com o modo stealth ativado
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ storageState: authFile });
   const page = context.pages().length ? context.pages()[0] : await context.newPage();
   
   const wait = () => {
-    const minMilliseconds = 5000;
-    const maxMilliseconds = 7000;
-    const randomDelay = Math.floor(Math.random() * (maxMilliseconds - minMilliseconds + 1)) + minMilliseconds;
+    const randomDelay = Math.floor(Math.random() * (7000 - 5000 + 1)) + 5000;
     console.log(`...Aguardando por ${(randomDelay / 1000).toFixed(1)} segundos...`);
     return page.waitForTimeout(randomDelay);
   };
 
   try {
-    console.log('🚀 Navegando para o YouTube com a sessão salva...');
+    console.log('🚀 Navegando para o YouTube...');
+    await wait();
     await page.goto('https://www.youtube.com');
-    
-    try {
-        const acceptButton = page.locator('button:has-text("Aceitar tudo")');
-        await acceptButton.waitFor({ state: 'visible', timeout: 5000 });
-        await acceptButton.click();
-        console.log('✔️ Pop-up de consentimento aceito.');
-    } catch (error) {
-        console.log('...Nenhum pop-up de consentimento encontrado.');
-    }
-    
     await page.waitForSelector('button#avatar-btn', { timeout: 15000 });
-    console.log('✅ Login via sessão salva bem-sucedido!');
-    
+    console.log('✅ Login confirmado!');
+
+    await wait();
     await page.getByRole('combobox', { name: 'Pesquisar' }).fill(videoTitle);
     await wait();
-    await page.getByRole('combobox', { name: 'Pesquisar' }).press('Enter');
+    await page.keyboard.press('Enter');
     await page.waitForLoadState('domcontentloaded');
-    await wait();
 
     const filtersButton = page.getByRole('button', { name: 'Filtros de enquete' });
     
+    await wait();
     await filtersButton.click();
     await wait();
     await page.getByRole('link', { name: 'Vídeo', exact: true }).click();
     await page.waitForLoadState('domcontentloaded');
     await wait();
-
+    
     await filtersButton.click();
     await wait();
     await page.getByRole('link', { name: 'a 20 minutos' }).click();
     await page.waitForLoadState('domcontentloaded');
-    await wait();
 
-    await filtersButton.click();
-    await wait();
-    await page.getByRole('link', { name: 'Última hora' }).click();
-    await page.waitForLoadState('domcontentloaded');
-    await wait();
+    const dateFilters = ['Última hora', 'Hoje', 'Esta semana'];
+    let previousFilter = null; 
 
-    if (await page.getByText('Nenhum resultado encontrado', { exact: true }).isVisible()) {
-      console.log('⚠️ Nenhum resultado encontrado. Tentando filtro "Hoje"...');
+    for (const dateFilter of dateFilters) {
+      console.log(`\n--- 🕵️‍♂️ TENTANDO COM O FILTRO DE DATA: "${dateFilter}" ---`);
       
+      if (previousFilter !== null) {
+        await wait();
+        await filtersButton.click();
+        await wait();
+        await page.getByRole('link', { name: previousFilter, exact: true }).click();
+        await page.waitForLoadState('domcontentloaded');
+      }
+
       await wait();
       await filtersButton.click();
       await wait();
-      await page.getByRole('link', { name: 'Última hora' }).click();
-      await wait();
-      await filtersButton.click();
-      await wait();
-      await page.getByRole('link', { name: 'Hoje', exact: true }).click();
+      await page.getByRole('link', { name: dateFilter, exact: true }).click();
       await page.waitForLoadState('domcontentloaded');
+      
+      previousFilter = dateFilter;
+      
       await wait();
 
       if (await page.getByText('Nenhum resultado encontrado', { exact: true }).isVisible()) {
-        console.log('⚠️ Ainda sem resultados. Tentando filtro "Esta semana"...');
+        console.log(`...Nenhum vídeo encontrado para "${dateFilter}". Tentando próximo filtro...`);
+        continue;
+      }
+      
+      const videoCount = await page.locator('ytd-video-renderer a#video-title').count();
+      const attempts = Math.min(videoCount, 5); 
+      console.log(`Encontrados ${videoCount} vídeos. Tentando os ${attempts} primeiros.`);
 
+      for (let i = 0; i < attempts; i++) {
+        console.log(`\n--- 🎬 Testando o ${i + 1}º vídeo da lista... ---`);
+        const targetVideoLink = page.locator('ytd-video-renderer a#video-title').nth(i);
+        
         await wait();
-        await filtersButton.click();
+        await targetVideoLink.scrollIntoViewIfNeeded();
+        const videoUrl = await targetVideoLink.getAttribute('href');
+        const fullUrl = new URL(videoUrl, 'https://www.youtube.com').toString();
+        
+        const videoPage = await context.newPage();
         await wait();
-        await page.getByRole('link', { name: 'Hoje', exact: true }).click();
-        await wait();
-        await filtersButton.click();
-        await wait();
-        await page.getByRole('link', { name: 'Esta semana' }).click();
-        await page.waitForLoadState('domcontentloaded');
-        await wait();
+        await videoPage.goto(fullUrl);
+
+        try {
+          console.log('...Verificando seção de comentários...');
+          await wait();
+          await videoPage.locator('#comments').scrollIntoViewIfNeeded();
+          await videoPage.waitForTimeout(3000); 
+
+          if (await videoPage.getByText('0 comentários', { exact: true }).isVisible()) {
+            console.log('❌ Vídeo com 0 comentários. Desistindo e tentando o próximo.');
+            await videoPage.close();
+            continue; 
+          }
+
+          console.log('✅ Vídeo com comentários encontrados! Postando...');
+          await wait();
+          await videoPage.getByText('Adicione um comentário…').click();
+          await wait();
+          const commentInput = videoPage.getByLabel('Adicione um comentário…');
+
+          await commentInput.click();
+
+          for (const char of commentText) {
+            await commentInput.press(char);
+            const randomDelay = Math.floor(Math.random() * 200) + 50;
+            await page.waitForTimeout(randomDelay);
+          }
+          await wait();
+          await videoPage.getByRole('button', { name: 'Comentar' }).click();
+          
+          console.log(`✔️ Ação de comentar enviada. Aguardando finalização...`);
+          await wait();
+          await wait();
+          await wait();
+          
+          await videoPage.close();
+          
+          console.log(fullUrl);
+          return fullUrl;
+
+        } catch (commentError) {
+          console.log(`❌ Falha ao processar vídeo (${commentError.message}). Tentando o próximo.`);
+          await videoPage.close();
+          continue;
+        }
       }
     }
-    
-    await page.locator('ytd-video-renderer a#video-title').nth(videoIndex).click();
-    await page.waitForURL('**/watch?v=**');
-    const finalUrl = page.url();
-    console.log(`🔗 Link final capturado: ${finalUrl}`);
-    await wait();
 
-    const commentsSection = page.locator('#comments');
-    await commentsSection.scrollIntoViewIfNeeded();
-    await wait();
-    
-    await page.getByText('Adicione um comentário…').click();
-    await wait();
-    await page.getByLabel('Adicione um comentário…').fill(commentText);
-    await wait();
-    await page.getByRole('button', { name: 'Comentar' }).click();
-    console.log(`✔️ Comentário 1/2 enviado: "${commentText}"`);
-    await wait();
-
-    await page.evaluate(() => document.activeElement.blur());
-    await wait();
-    await wait();
-    await wait();
-
-    /*await page.getByLabel('Adicione um comentário…').click();
-    await wait();
-    await page.getByLabel('Adicione um comentário…').fill("Comentário feito com @Utoopy, venha conhecer!");
-    await wait();
-    await page.getByRole('button', { name: 'Comentar' }).click();
-    console.log(`✔️ Comentário 2/2 enviado.`);
-    await wait();*/
-
-    return finalUrl;
+    throw new Error('Não foi possível encontrar nenhum vídeo com comentários ativados após todas as tentativas.');
 
   } catch (error) {
-    console.error('❌ Ocorreu um erro durante a automação:', error.message);
-    if (error.message.includes('button#avatar-btn')) {
-        console.log('\n❗️ --- AÇÃO NECESSÁRIA: FAÇA O LOGIN --- ❗️');
-    }
-    throw error; 
+    console.error('❌ Ocorreu um erro fatal durante a automação:', error.message);
+    throw error;
   } finally {
     console.log('\nScript finalizado.');
     await context.close();
@@ -148,9 +155,15 @@ async function commentOnYouTubeVideo(videoTitle, commentText, videoIndex = 1) {
 module.exports = { commentOnYouTubeVideo };
 
 if (require.main === module) {
+
   (async () => {
-    const tituloParaTeste = "viagem";
-    const comentarioParaTeste = "Adoro viajar!";
-    await commentOnYouTubeVideo(tituloParaTeste, comentarioParaTeste, 0);
+
+  const tituloParaTeste = "Video game";
+
+  const comentarioParaTeste = "Adoro jogar!";
+
+  await commentOnYouTubeVideo(tituloParaTeste, comentarioParaTeste, 0);
+
   })();
+
 }
