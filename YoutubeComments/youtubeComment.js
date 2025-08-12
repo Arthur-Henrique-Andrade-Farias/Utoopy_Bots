@@ -12,7 +12,14 @@ async function commentOnYouTubeVideo(videoTitle, commentText) {
     throw new Error(`Arquivo de autenticação "${authFile}" não encontrado.`);
   }
 
-  const browser = await chromium.launch({ headless: true });
+    const browser = await chromium.launch({ 
+    headless: true,
+    args: [
+      '--disable-blink-features=AutomationControlled',
+      '--disable-dev-shm-usage', 
+      '--no-sandbox'             
+    ] 
+  });
   const context = await browser.newContext({ storageState: authFile });
   const page = context.pages().length ? context.pages()[0] : await context.newPage();
   
@@ -30,8 +37,19 @@ async function commentOnYouTubeVideo(videoTitle, commentText) {
     console.log('✅ Login confirmado!');
 
     await wait();
-    await page.getByRole('combobox', { name: 'Pesquisar' }).fill(videoTitle);
+    /*await page.getByRole('combobox', { name: 'Pesquisar' }).fill(videoTitle);
+    await wait();*/
+    await page.getByRole('combobox', { name: 'Pesquisar' }).click();
     await wait();
+    const commentInput = page.getByRole('combobox', { name: 'Pesquisar' })
+
+    await commentInput.click();
+    await page.waitForTimeout(200); 
+    for (const char of videoTitle) {
+        await commentInput.type(char);
+        const randomDelay = Math.floor(Math.random() * 100) + 50;
+        await page.waitForTimeout(randomDelay);
+    }
     await page.keyboard.press('Enter');
     await page.waitForLoadState('domcontentloaded');
 
@@ -101,8 +119,9 @@ async function commentOnYouTubeVideo(videoTitle, commentText) {
           await videoPage.locator('#comments').scrollIntoViewIfNeeded();
           await videoPage.waitForTimeout(3000); 
 
-          if (await videoPage.getByText('0 comentários', { exact: true }).isVisible()) {
-            console.log('❌ Vídeo com 0 comentários. Desistindo e tentando o próximo.');
+          if (await videoPage.getByText('0 comentários', { exact: true }).isVisible() || await videoPage.getByText('Os comentários estão').isVisible() || 
+        await videoPage.getByText('Os comentários estão desativados. Saiba mais').isVisible()) {
+            console.log('❌ Vídeo com 0 comentários, ou com os comentários desativados. Desistindo e tentando o próximo.');
             await videoPage.close();
             continue; 
           }
@@ -114,12 +133,13 @@ async function commentOnYouTubeVideo(videoTitle, commentText) {
           const commentInput = videoPage.getByLabel('Adicione um comentário…');
 
           await commentInput.click();
-
+          await page.waitForTimeout(200); 
           for (const char of commentText) {
-            await commentInput.press(char);
-            const randomDelay = Math.floor(Math.random() * 200) + 50;
-            await page.waitForTimeout(randomDelay);
+              await commentInput.type(char);
+              const randomDelay = Math.floor(Math.random() * 100) + 50;
+              await page.waitForTimeout(randomDelay);
           }
+
           await wait();
           await videoPage.getByRole('button', { name: 'Comentar' }).click();
           
@@ -158,9 +178,9 @@ if (require.main === module) {
 
   (async () => {
 
-  const tituloParaTeste = "Video game";
+  const tituloParaTeste = "Empresa";
 
-  const comentarioParaTeste = "Adoro jogar!";
+  const comentarioParaTeste = "Conselheiro ai é a melhor plataforma para desenvolvimento pessoal e profissional!";
 
   await commentOnYouTubeVideo(tituloParaTeste, comentarioParaTeste, 0);
 
